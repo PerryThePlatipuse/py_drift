@@ -35,7 +35,7 @@ def load_image(name, colorkey=None):
 class Track(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites)
-        self.image = load_image("track1.png")
+        self.image = load_image("bg-test.png")
         self.rect = self.image.get_rect()
 
 
@@ -50,7 +50,7 @@ class Car(pygame.sprite.Sprite):
         self.drift_acceleration = drift_acceleration
         self.friction = friction
         self.velocity_friction = velocity_friction
-        self.original_image = load_image("car.png").convert()
+        self.original_image = load_image("car.png")
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.rect.x = spawn_x
@@ -99,7 +99,7 @@ class Car(pygame.sprite.Sprite):
 
 
 all_sprites = pygame.sprite.Group()
-car = Car(drift_acceleration=5, max_velocity=0.5)
+car = Car(drift_acceleration=0.7, max_velocity=0.5)
 track = Track()
 all_sprites.add(track)
 all_sprites.add(car)
