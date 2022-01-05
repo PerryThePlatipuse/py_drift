@@ -1,88 +1,79 @@
-import math
-import os
-import sys
-import time
+import socket
+import pickle
 
-import pygame
+server = ""
+port = 5555
 
-WIDTH = 800
-HEIGHT = 650
-FPS = 30
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
+games = {}
+idCount = 0
+currentPlayer = 0
 
-pygame.init()
-pygame.mixer.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("My Game")
-clock = pygame.time.Clock()
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+s.bind((server, port))
+
+s.listen()
+print("Waiting for a connection, Server Started")
+
+class Game:
+    def __init__(self, id):
+        self.connected = False
+
+players = [Player(0), Player(1)]
+
+def threaded_client(conn, player, gameId):
+    global idCount
+    conn.send(pickle.dumps(players[player]))
+    reply = ""
+    while True:
+        try:
+            data = pickle.loads(conn.recv(2048))
+            players[player] = data
+            if gameId in games:
+                game = games[gameId]
+                if not data:
+                    print("Disconnected")
+                    break
+                else:
+                    if player == 1:
+                        reply = players[0]
+                    else:
+                        reply = players[1]
+
+                conn.sendall(pickle.dumps(reply))
+        except:
+            break
+
+    print("Lost connection")
+    try:
+        del games[gameId]
+        print("Closing game", gameId)
+    except:
+        pass
+    idCount -= 1
+    conn.close()
+
+while True:
+    conn, addr = s.accept()
+    print("Connected to:", addr)
+
+    idCount += 1
+    p = 0
+
+    gameId = (idCount - 1) // 2
+
+    if idCount % 2 == 1:
+        games[gameId] = Game(gameId)
+        players[0].connected = True
+        print("Creating a new game")
+        print("Waiting for another player")
+    else:
+        games[gameId].connected = True
+        p = 1
+        players[1].connected = True
+        print("Game is available")
 
 
-def load_image(name, colorkey=None):
-    fullname = os.path.join('images', name)
-    # если файл не существует, то выходим
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
-    image = pygame.image.load(fullname)
-    return image
 
-
-def rot_center(image, angle, x, y):
-    rotated_image = pygame.transform.rotate(image, angle)
-    new_rect = rotated_image.get_rect(center=image.get_rect(center=(x, y)).center)
-
-    return rotated_image, new_rect
-
-
-class Player(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.original_image = load_image("car.png").convert()
-        self.image = self.original_image
-        self.rect = self.image.get_rect()
-        self.angle = 0
-
-    def update(self):
-        self.image = pygame.transform.rotate(self.original_image, self.angle)
-        self.angle += 1  # Value will reapeat after 359. This prevents angle to overflow.
-        self.angle %= 360
-        x, y = self.rect.center  # Save its current center.
-        self.rect = self.image.get_rect()  # Replace old rect with new rect.
-        self.rect.center = (x, y)
-
-
-all_sprites = pygame.sprite.Group()
-player = Player()
-all_sprites.add(player)
-pos_x = 0
-pos_y = 0
-
-running = True
-while running:
-    clock.tick(FPS)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-    pressed = pygame.key.get_pressed()
-    # img, rec = rot_center(player.image, 10, player.rect.centerx, player.rect.centery)
-    # player.image = img
-    # player.rect = rec
-    # time.sleep(1)
-    # # if pressed[pygame.K_LEFT]:
-    # #     player.rotation -= (1 + player.velocity / 3) * math.sqrt(pos_x ** 2 + pos_y ** 2)
-    # #     player.image = pygame.transform.rotate(player.image, -(1 + player.velocity / 3) * math.sqrt(
-    # #         pos_x ** 2 + pos_y ** 2))
-    # # if pressed[pygame.K_RIGHT]:
-    # #     player.rotation += (1 + player.velocity / 3) * math.sqrt(
-    # #         pos_x ** 2 + pos_y ** 2)
-    # #     player.image = pygame.transform.rotate(player.image, +(1 + player.velocity / 3) * math.sqrt(
-    # #         pos_x ** 2 + pos_y ** 2))
-    all_sprites.update()
-    screen.fill(BLACK)
-    all_sprites.draw(screen)
-    pygame.display.flip()
-pygame.quit()
+    start_new_thread(threaded_client, (conn, currentPlayer, gameId))
+    currentPlayer += 1
