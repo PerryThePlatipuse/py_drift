@@ -99,7 +99,7 @@ class Car(pygame.sprite.Sprite):
 
 
 all_sprites = pygame.sprite.Group()
-car = Car(drift_acceleration=0.7, max_velocity=0.5)
+car = Car(drift_acceleration=1.5, max_velocity=0.5)
 track = Track()
 all_sprites.add(track)
 all_sprites.add(car)
