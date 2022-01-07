@@ -32,11 +32,39 @@ def load_image(name, colorkey=None):
     return image
 
 
-class Track(pygame.sprite.Sprite):
+class Grass(pygame.sprite.Sprite):
+    image = load_image("grass-1.png").convert_alpha()
+
+    def __init__(self, deceleration=0.5, velocity_limit=0.2):
+        super().__init__(all_sprites)
+        self.deceleration = deceleration
+        self.velocity_limit = velocity_limit
+        self.image = Grass.image
+        self.rect = self.image.get_rect()
+        # создаём маску
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+class Road(pygame.sprite.Sprite):
+    image = load_image("road-1.png").convert_alpha()
+
     def __init__(self):
         super().__init__(all_sprites)
-        self.image = load_image("track1.png")
+        self.image = Road.image
         self.rect = self.image.get_rect()
+        # создаём маску
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+class Border(pygame.sprite.Sprite):
+    image = load_image("road-1.png").convert_alpha()
+
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.image = Road.image
+        self.rect = self.image.get_rect()
+        # создаём маску
+        self.mask = pygame.mask.from_surface(self.image)
 
 
 class Car(pygame.sprite.Sprite):
@@ -44,13 +72,16 @@ class Car(pygame.sprite.Sprite):
                  max_velocity=1.0, friction=1.08, velocity_friction=5, spawn_x=400, spawn_y=300):
         # drift_acceleration from 0.1 to 2, max_velocity should be less than 1.5
         pygame.sprite.Sprite.__init__(self)
-        self.froward_acceleration = forward_acceleration
+        self.forward_acceleration = forward_acceleration
         self.backward_acceleration = backward_acceleration
+        self.froward_acceleration_const = forward_acceleration
+        self.backward_acceleration_const = backward_acceleration
         self.max_velocity = max_velocity
+        self.max_velocity_const = max_velocity
         self.drift_acceleration = drift_acceleration
         self.friction = friction
         self.velocity_friction = velocity_friction
-        self.original_image = load_image("car.png").convert()
+        self.original_image = load_image("car.png").convert_alpha()
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.rect.x = spawn_x
@@ -59,10 +90,12 @@ class Car(pygame.sprite.Sprite):
         self.velocity = 0
         self.delta_x = 0
         self.delta_y = 0
+        self.mask = pygame.mask.from_surface(self.image)
+        self.on_grass = False
 
     def update(self, pressed):
         if pressed[pygame.K_UP]:
-            self.velocity += 1 / (self.velocity + self.froward_acceleration)
+            self.velocity += 1 / (self.velocity + self.forward_acceleration)
         if pressed[pygame.K_DOWN]:
             self.velocity -= 1 / (self.velocity + self.backward_acceleration)
         self.velocity = min(self.max_velocity, self.velocity)
@@ -80,6 +113,18 @@ class Car(pygame.sprite.Sprite):
         if abs(self.velocity) < 0.01: self.velocity = 0
         self.angle = int(self.angle)
         self.angle %= 360
+        if pygame.sprite.collide_mask(self, grass):
+            if self.on_grass is False:
+                self.max_velocity -= grass.velocity_limit
+                self.forward_acceleration -= grass.deceleration
+                self.backward_acceleration -= grass.deceleration
+                self.on_grass = True
+        if not pygame.sprite.collide_mask(self, grass):
+            if self.on_grass is True:
+                self.max_velocity = self.max_velocity_const
+                self.forward_acceleration = self.froward_acceleration_const
+                self.backward_acceleration = self.backward_acceleration_const
+                self.on_grass = False
 
     def turn_left(self, x, y):
         angle = int(+(self.drift_acceleration + self.velocity / 3) * math.sqrt(x ** 2 + y ** 2))
@@ -99,9 +144,11 @@ class Car(pygame.sprite.Sprite):
 
 
 all_sprites = pygame.sprite.Group()
-car = Car(drift_acceleration=5, max_velocity=0.5)
-track = Track()
-all_sprites.add(track)
+car = Car(drift_acceleration=0.7, max_velocity=0.5)
+grass = Grass(deceleration=0.7)
+road = Road()
+all_sprites.add(grass)
+all_sprites.add(road)
 all_sprites.add(car)
 
 
