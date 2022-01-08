@@ -4,7 +4,6 @@ import sys
 
 import pygame
 
-
 WIDTH = 1300
 HEIGHT = 700
 FPS = 60
@@ -13,7 +12,6 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
-
 
 pygame.init()
 pygame.mixer.init()
@@ -32,8 +30,22 @@ def load_image(name, colorkey=None):
     return image
 
 
+class Camera:
+    def __init__(self):
+        self.dx = 400
+        self.dy = 300
+
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+
+
 class Grass(pygame.sprite.Sprite):
-    image = load_image("grass-1.png").convert_alpha()
+    image = load_image("grass2.png").convert_alpha()
 
     def __init__(self, deceleration=0.5, velocity_limit=0.2):
         super().__init__(all_sprites)
@@ -41,29 +53,26 @@ class Grass(pygame.sprite.Sprite):
         self.velocity_limit = velocity_limit
         self.image = Grass.image
         self.rect = self.image.get_rect()
-        # создаём маску
         self.mask = pygame.mask.from_surface(self.image)
 
 
 class Road(pygame.sprite.Sprite):
-    image = load_image("road-1.png").convert_alpha()
+    image = load_image("road2.png").convert_alpha()
 
     def __init__(self):
         super().__init__(all_sprites)
         self.image = Road.image
         self.rect = self.image.get_rect()
-        # создаём маску
         self.mask = pygame.mask.from_surface(self.image)
 
 
 class Border(pygame.sprite.Sprite):
-    image = load_image("road-1.png").convert_alpha()
+    image = load_image("borders2.png").convert_alpha()
 
     def __init__(self):
         super().__init__(all_sprites)
-        self.image = Road.image
+        self.image = Border.image
         self.rect = self.image.get_rect()
-        # создаём маску
         self.mask = pygame.mask.from_surface(self.image)
 
 
@@ -94,18 +103,19 @@ class Car(pygame.sprite.Sprite):
         self.on_grass = False
 
     def update(self, pressed):
-        if pressed[pygame.K_UP]:
+        print(self.velocity)
+        if pressed[pygame.K_UP] or pressed[pygame.K_w]:
             self.velocity += 1 / (self.velocity + self.forward_acceleration)
-        if pressed[pygame.K_DOWN]:
+        if pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
             self.velocity -= 1 / (self.velocity + self.backward_acceleration)
         self.velocity = min(self.max_velocity, self.velocity)
         self.delta_x += math.sin(math.radians(self.angle)) * self.velocity
         self.delta_y += math.cos(math.radians(self.angle)) * self.velocity
         self.rect.x += int(self.delta_x)
         self.rect.y += int(self.delta_y)
-        if pressed[pygame.K_LEFT]:
+        if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
             self.turn_left(self.delta_x, self.delta_y)
-        if pressed[pygame.K_RIGHT]:
+        if pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
             self.turn_right(self.delta_x, self.delta_y)
         self.delta_x /= self.friction
         self.delta_y /= self.friction
@@ -125,6 +135,8 @@ class Car(pygame.sprite.Sprite):
                 self.forward_acceleration = self.froward_acceleration_const
                 self.backward_acceleration = self.backward_acceleration_const
                 self.on_grass = False
+        if pygame.sprite.collide_mask(self, border):
+            self.velocity -= 1 / (self.velocity + self.backward_acceleration * 9.5)
 
     def turn_left(self, x, y):
         angle = int(+(self.drift_acceleration + self.velocity / 3) * math.sqrt(x ** 2 + y ** 2))
@@ -144,13 +156,15 @@ class Car(pygame.sprite.Sprite):
 
 
 all_sprites = pygame.sprite.Group()
-car = Car(drift_acceleration=0.7, max_velocity=0.5)
+car = Car(drift_acceleration=0.5, max_velocity=1)
 grass = Grass(deceleration=0.7)
+border = Border()
 road = Road()
+camera = Camera()
 all_sprites.add(grass)
 all_sprites.add(road)
 all_sprites.add(car)
-
+all_sprites.add(border)
 
 running = True
 
@@ -161,6 +175,9 @@ while running:
             running = False
     pressed = pygame.key.get_pressed()
     car.update(pressed)
+    camera.update(car)
+    for sprite in all_sprites:
+        camera.apply(sprite)
     # all_sprites.update()
     screen.fill(BLACK)
     all_sprites.draw(screen)
