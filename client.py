@@ -8,10 +8,10 @@ win = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Client")
 
 
-def redrawWindow(win,player, player2):
-    win.fill((255,255,255))
-    player.draw(win)
-    player2.draw(win)
+def redrawWindow(window, player, player2):
+    window.fill((255, 255, 255))
+    player.draw(window)
+    player2.draw(window)
     pygame.display.update()
 
 
@@ -32,5 +32,6 @@ def main():
 
         p.move()
         redrawWindow(win, p, p2)
+
 
 main()
