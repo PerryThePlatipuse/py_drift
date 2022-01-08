@@ -103,11 +103,13 @@ class Car(pygame.sprite.Sprite):
         self.on_grass = False
 
     def update(self, pressed):
-        print(self.velocity)
         if pressed[pygame.K_UP] or pressed[pygame.K_w]:
             self.velocity += 1 / (self.velocity + self.forward_acceleration)
         if pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
             self.velocity -= 1 / (self.velocity + self.backward_acceleration)
+        if pygame.sprite.collide_mask(self, border):
+            self.delta_x = -self.delta_x // 1.4
+            self.delta_y = -self.delta_y // 1.4
         self.velocity = min(self.max_velocity, self.velocity)
         self.delta_x += math.sin(math.radians(self.angle)) * self.velocity
         self.delta_y += math.cos(math.radians(self.angle)) * self.velocity
@@ -135,8 +137,6 @@ class Car(pygame.sprite.Sprite):
                 self.forward_acceleration = self.froward_acceleration_const
                 self.backward_acceleration = self.backward_acceleration_const
                 self.on_grass = False
-        if pygame.sprite.collide_mask(self, border):
-            self.velocity -= 1 / (self.velocity + self.backward_acceleration * 9.5)
 
     def turn_left(self, x, y):
         angle = int(+(self.drift_acceleration + self.velocity / 3) * math.sqrt(x ** 2 + y ** 2))
