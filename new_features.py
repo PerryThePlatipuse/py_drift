@@ -81,7 +81,7 @@ while running:
     # #         pos_x ** 2 + pos_y ** 2)
     # #     player.image = pygame.transform.rotate(player.image, +(1 + player.velocity / 3) * math.sqrt(
     # #         pos_x ** 2 + pos_y ** 2))
-    all_sprites.update()
+    all_sprites.update1()
     screen.fill(BLACK)
     all_sprites.draw(screen)
     pygame.display.flip()

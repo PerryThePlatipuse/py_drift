@@ -1,8 +1,8 @@
 import math
 import os
 import sys
-
 import pygame
+import random
 
 WIDTH = 1300
 HEIGHT = 700
@@ -76,6 +76,41 @@ class Border(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
 
+screen_rect = (0, 0, WIDTH, HEIGHT)
+class Particle(pygame.sprite.Sprite):
+    fire = [load_image("smoke.png").convert_alpha()]
+    for scale in (20, 35, 50, 65, 80):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites)
+        self.fire[0] = self.fire[1]
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+        self.image_alpha = 255
+        self.fade = random.randint(5, 10)
+        self.velocity = [dx, dy]
+        self.rect.x, self.rect.y = pos
+
+        self.gravity = 5
+
+    def update(self):
+        self.image_alpha -= self.fade
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        if self.image_alpha <= 0:
+            self.kill()
+        else:
+            self.image.set_alpha(self.image_alpha)
+
+
+def create_particles(position):
+    particle_count = 1
+    numbers = range(-1, 1)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
+
+
 class Car(pygame.sprite.Sprite):
     def __init__(self, forward_acceleration=1.0, backward_acceleration=1.0, drift_acceleration=1.0,
                  max_velocity=1.0, friction=1.08, velocity_friction=5, spawn_x=400, spawn_y=300):
@@ -102,7 +137,7 @@ class Car(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.on_grass = False
 
-    def update(self, pressed):
+    def update1(self, pressed):
         if pressed[pygame.K_UP] or pressed[pygame.K_w]:
             self.velocity += 1 / (self.velocity + self.forward_acceleration)
         if pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
@@ -145,6 +180,7 @@ class Car(pygame.sprite.Sprite):
         center_x, center_y = self.rect.center  # Save its current center.
         self.rect = self.image.get_rect()  # Replace old rect with new rect.
         self.rect.center = (center_x, center_y)
+        create_particles((car.rect.x, car.rect.y))
 
     def turn_right(self, x, y):
         angle = int(-(self.drift_acceleration + self.velocity / 3) * math.sqrt(x ** 2 + y ** 2))
@@ -153,9 +189,10 @@ class Car(pygame.sprite.Sprite):
         center_x, center_y = self.rect.center  # Save its current center.
         self.rect = self.image.get_rect()  # Replace old rect with new rect.
         self.rect.center = (center_x, center_y)
+        create_particles((car.rect.x, car.rect.y))
 
 
-all_sprites = pygame.sprite.Group()
+all_sprites = pygame.sprite.LayeredUpdates()
 car = Car(drift_acceleration=0.5, max_velocity=1)
 grass = Grass(deceleration=0.7)
 border = Border()
@@ -174,12 +211,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
     pressed = pygame.key.get_pressed()
-    car.update(pressed)
+    car.update1(pressed)
     camera.update(car)
     for sprite in all_sprites:
         camera.apply(sprite)
-    # all_sprites.update()
+    all_sprites.update()
     screen.fill(BLACK)
     all_sprites.draw(screen)
     pygame.display.flip()
+    all_sprites.move_to_front(car)
 pygame.quit()
