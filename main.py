@@ -77,6 +77,8 @@ class Border(pygame.sprite.Sprite):
 
 
 screen_rect = (0, 0, WIDTH, HEIGHT)
+
+
 class Particle(pygame.sprite.Sprite):
     fire = [load_image("smoke.png").convert_alpha()]
     for scale in (20, 35, 50, 65, 80):
