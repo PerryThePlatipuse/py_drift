@@ -142,6 +142,8 @@ class Car(pygame.sprite.Sprite):
             self.velocity += 1 / (self.velocity + self.forward_acceleration)
         if pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
             self.velocity -= 1 / (self.velocity + self.backward_acceleration)
+        if (pressed[pygame.K_DOWN] or pressed[pygame.K_s]) and (pressed[pygame.K_UP] or pressed[pygame.K_w]):
+            create_particles((car.rect.x, car.rect.y)) # burnout )))
         if pygame.sprite.collide_mask(self, border):
             self.delta_x = -self.delta_x // 1.4
             self.delta_y = -self.delta_y // 1.4
@@ -152,8 +154,12 @@ class Car(pygame.sprite.Sprite):
         self.rect.y += int(self.delta_y)
         if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
             self.turn_left(self.delta_x, self.delta_y)
+            if car.velocity != 0:
+                create_particles((car.rect.x, car.rect.y))
         if pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
             self.turn_right(self.delta_x, self.delta_y)
+            if car.velocity != 0:
+                create_particles((car.rect.x, car.rect.y))
         self.delta_x /= self.friction
         self.delta_y /= self.friction
         self.velocity /= self.velocity_friction
@@ -180,7 +186,6 @@ class Car(pygame.sprite.Sprite):
         center_x, center_y = self.rect.center  # Save its current center.
         self.rect = self.image.get_rect()  # Replace old rect with new rect.
         self.rect.center = (center_x, center_y)
-        create_particles((car.rect.x, car.rect.y))
 
     def turn_right(self, x, y):
         angle = int(-(self.drift_acceleration + self.velocity / 3) * math.sqrt(x ** 2 + y ** 2))
@@ -189,7 +194,6 @@ class Car(pygame.sprite.Sprite):
         center_x, center_y = self.rect.center  # Save its current center.
         self.rect = self.image.get_rect()  # Replace old rect with new rect.
         self.rect.center = (center_x, center_y)
-        create_particles((car.rect.x, car.rect.y))
 
 
 all_sprites = pygame.sprite.LayeredUpdates()
