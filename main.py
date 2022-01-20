@@ -44,6 +44,18 @@ class Camera:
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
 
+class Minimap(pygame.sprite.Sprite):
+    image = load_image("minimap-road.png").convert_alpha()
+
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.image = Minimap.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = 260 * 4
+        self.rect.y = 0
+
+
 class Grass(pygame.sprite.Sprite):
     image = load_image("grass2.png").convert_alpha()
 
@@ -204,10 +216,13 @@ grass = Grass(deceleration=0.7)
 border = Border()
 road = Road()
 camera = Camera()
+minimap = Minimap()
 all_sprites.add(grass)
 all_sprites.add(road)
 all_sprites.add(car)
 all_sprites.add(border)
+all_sprites.add(minimap)
+
 
 running = True
 
@@ -220,7 +235,7 @@ while running:
     car.update1(pressed)
     camera.update(car)
     for sprite in all_sprites:
-        camera.apply(sprite)
+        if not isinstance(sprite, Minimap): camera.apply(sprite)
     all_sprites.update()
     screen.fill(BLACK)
     all_sprites.draw(screen)
