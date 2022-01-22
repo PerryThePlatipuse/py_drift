@@ -56,6 +56,22 @@ class Minimap(pygame.sprite.Sprite):
         self.rect.y = 0
 
 
+class MinimapPlayer(pygame.sprite.Sprite):
+    image = load_image('minimap-player.png').convert_alpha()
+
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.image = MinimapPlayer.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = 1040 + car.rect.x / 10
+        self.rect.y = car.rect.y / 10
+
+    def update(self):
+        self.rect.x = 1040 + car.real_x / 10
+        self.rect.y = car.real_y / 10
+
+
 class Grass(pygame.sprite.Sprite):
     image = load_image("grass2.png").convert_alpha()
 
@@ -121,13 +137,14 @@ class Particle(pygame.sprite.Sprite):
 def create_particles(position):
     particle_count = 1
     numbers = range(-1, 1)
-    for _ in range(particle_count):
-        Particle(position, random.choice(numbers), random.choice(numbers))
+    if not car.on_grass:
+        for _ in range(particle_count):
+            Particle(position, random.choice(numbers), random.choice(numbers))
 
 
 class Car(pygame.sprite.Sprite):
     def __init__(self, forward_acceleration=1.0, backward_acceleration=1.0, drift_acceleration=1.0,
-                 max_velocity=1.0, friction=1.08, velocity_friction=5, spawn_x=400, spawn_y=300):
+                 max_velocity=1.0, friction=1.08, velocity_friction=5, spawn_x=1300, spawn_y=700):
         # drift_acceleration from 0.1 to 2, max_velocity should be less than 1.5
         pygame.sprite.Sprite.__init__(self)
         self.forward_acceleration = forward_acceleration
@@ -144,6 +161,8 @@ class Car(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = spawn_x
         self.rect.y = spawn_y
+        self.real_x = spawn_x
+        self.real_y = spawn_y
         self.angle = 0
         self.velocity = 0
         self.delta_x = 0
@@ -166,6 +185,8 @@ class Car(pygame.sprite.Sprite):
         self.delta_y += math.cos(math.radians(self.angle)) * self.velocity
         self.rect.x += int(self.delta_x)
         self.rect.y += int(self.delta_y)
+        self.real_x += int(self.delta_x)
+        self.real_y += int(self.delta_y)
         if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
             self.turn_left(self.delta_x, self.delta_y)
             if car.velocity != 0:
@@ -217,11 +238,13 @@ border = Border()
 road = Road()
 camera = Camera()
 minimap = Minimap()
+minimap_player = MinimapPlayer()
 all_sprites.add(grass)
 all_sprites.add(road)
 all_sprites.add(car)
 all_sprites.add(border)
 all_sprites.add(minimap)
+all_sprites.add(minimap_player)
 
 
 running = True
@@ -235,7 +258,7 @@ while running:
     car.update1(pressed)
     camera.update(car)
     for sprite in all_sprites:
-        if not isinstance(sprite, Minimap): camera.apply(sprite)
+        if not isinstance(sprite, Minimap) and not isinstance(sprite, MinimapPlayer): camera.apply(sprite)
     all_sprites.update()
     screen.fill(BLACK)
     all_sprites.draw(screen)
