@@ -5,7 +5,8 @@ import pygame
 import random
 from itertools import cycle
 from network import Network
-
+from PIL import Image
+import time
 
 YELLOW = (255, 255, 0)
 WIDTH = 1300
@@ -18,6 +19,27 @@ GREEN = (75, 93, 3)
 BLUE = (0, 0, 255)
 LIGHT_GREY = (178, 178, 178)
 DARK_GREY = (78, 78, 78)
+size_for_gif=(644, 604)
+FORMAT = "RGBA"
+
+
+def pil_to_game(img):
+    data = img.tobytes("raw", FORMAT)
+    return pygame.image.fromstring(data, img.size, FORMAT)
+
+
+def get_gif_frame(img, frame):
+    img.seek(frame)
+    return  img.convert(FORMAT)
+
+
+def init():
+    return pygame.display.set_mode(size_for_gif)
+
+
+def exit():
+    pygame.quit()
+
 
 pygame.init()
 pygame.mixer.init()
@@ -38,19 +60,6 @@ class Camera:
     def update(self, target):
         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
-
-
-class Text(pygame.sprite.Sprite):
-    def __init__(self, text, size, color, width, height):
-        # Call the parent class (Sprite) constructor
-        pygame.sprite.Sprite.__init__(self)
-
-        self.font = pygame.font.SysFont("Arial", size)
-        self.textSurf = self.font.render(text, 1, color)
-        self.image = pygame.Surface((width, height))
-        W = self.textSurf.get_width()
-        H = self.textSurf.get_height()
-        self.image.blit(self.textSurf, [width / 2 - W / 2, height / 2 - H / 2])
 
 
 def load_image(name, colorkey=None):
@@ -144,7 +153,6 @@ class Border(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
 
-
 class Particle(pygame.sprite.Sprite):
     fire = [load_image("smoke.png").convert_alpha()]
     for scale in (20, 35, 50, 65, 80):
@@ -205,7 +213,7 @@ class Car(pygame.sprite.Sprite):
         self.rect.y = spawn_y
         self.real_x = spawn_x
         self.real_y = spawn_y
-        self.angle = 0
+        self.angle = 270
         self.velocity = 0
         self.delta_x = 0
         self.delta_y = 0
@@ -218,6 +226,10 @@ class Car(pygame.sprite.Sprite):
         self.on_finish = False
         self.dct_checkpoints = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False, 8: False, 9: False}
         self.count = 0
+        self.image = pygame.transform.rotate(self.original_image, self.angle)
+        center_x, center_y = self.rect.center  # Save its current center.
+        self.rect = self.image.get_rect()  # Replace old rect with new rect.
+        self.rect.center = (center_x, center_y)
 
     def update1(self, pressed):
         if self.unplayable:
@@ -286,16 +298,16 @@ class Car(pygame.sprite.Sprite):
         elif pygame.sprite.collide_mask(self, checkpoint9) and self.dct_checkpoints[8] is True:
             self.dct_checkpoints[9] = True
         elif pygame.sprite.collide_mask(self, finish):
-            if self.on_finish is False:
-                self.on_finish = True
-                print("finish")
-                if self.dct_checkpoints[9] is True:
-                    self.dct_checkpoints = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False,
-                                            8: False, 9: False}
-                    self.count += 1
-            elif not pygame.sprite.collide_mask(self, finish):
-                if self.on_finish is True:
-                    self.on_finish = False
+            # if self.on_finish is False:
+            #     self.on_finish = True
+            #     print("finish")
+            if self.dct_checkpoints[9] is True:
+                self.dct_checkpoints = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False,
+                                        8: False, 9: False}
+                self.count += 1
+            # elif not pygame.sprite.collide_mask(self, finish):
+            #     if self.on_finish is True:
+            #         self.on_finish = False
         # print(self.dct_checkpoints)
         # print(self.count)
 
@@ -318,7 +330,6 @@ class Car(pygame.sprite.Sprite):
         center_x, center_y = self.rect.center  # Save its current center.
         self.rect = self.image.get_rect()  # Replace old rect with new rect.
         self.rect.center = (center_x, center_y)
-
 
 
 class FinishLine(pygame.sprite.Sprite):
@@ -438,11 +449,34 @@ def start_screen():
         clock.tick(FPS)
 
 
+def gameover_screen():
+    fon = pygame.transform.scale(load_image('gameover_screen.png'), (WIDTH, HEIGHT))
+    running = True
+    while running:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        screen.blit(fon, (0, 0))
+        font = pygame.font.Font(None, 64)
+        if win_disel_red:
+            win = "RED"
+        if win_disel_blue:
+            win = "BLUE"
+        winner_s = font.render(win, 1, RED if win == "RED" else BLUE)
+        time_s = font.render(f'{time_passed:.2f} seconds', 1, WHITE)
+        screen.blit(winner_s, (620, 280))
+        screen.blit(time_s, (580, 480))
+        pygame.display.flip()
+
+
+
+
 start_screen()
 playlist = cycle(['music/StepWay - Born With Attitude.mp3', 'music/StepWay - Miff.mp3',
                   'music/StepWay - Bullet Hate.mp3'])
 pygame.mixer.music.load('music/StepWay - Bullet Hate.mp3')
-pygame.mixer.music.set_volume(0)
+pygame.mixer.music.set_volume(0.1)
 pygame.mixer.music.load(next(playlist))
 pygame.mixer.music.queue(next(playlist))
 pygame.mixer.music.set_endevent(pygame.USEREVENT)
@@ -464,9 +498,22 @@ if pos[0]:
 else:
     car_red = Car(drift_acceleration=0.7, max_velocity=1, color="red", spawn_x=1300, spawn_y=700, key_r=pygame.K_l, key_b=pygame.K_k, key_l=pygame.K_j, key_f=pygame.K_i, unplayable=True)
     car_blue = Car(drift_acceleration=0.7, max_velocity=1, spawn_x=1400, spawn_y=800, color="blue")
-send_info = [0] * 5
-received_info = [0] * 5
-while not received_info[-1]:
+send_info = [0] * 6
+received_info = [0] * 6
+
+init()
+gif_img = Image.open("images/car_load.gif")
+current_frame = 0
+clock = pygame.time.Clock()
+while not received_info[4]:
+    frame = pil_to_game(get_gif_frame(gif_img, current_frame))
+    screen.blit(frame, (0, 0))
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            break
+    current_frame = (current_frame + 1) % gif_img.n_frames
+    pygame.display.flip()
+    clock.tick(10)
     received_info = net.send(send_info[:])
     send_info[0] = not received_info[0]
     send_info[1] = car_red.real_x
@@ -474,8 +521,8 @@ while not received_info[-1]:
     send_info[3] = car_red.angle
     send_info[4] = True
 
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 grass = Grass(deceleration=0.7)
-text = Text(text="kal", size=8, color=BLUE, height=100, width=100)
 border = Border()
 road = Road()
 camera = Camera()
@@ -483,7 +530,6 @@ minimap = Minimap()
 minimap_player_red = MinimapPlayerRed()
 minimap_player_blue = MinimapPlayerBlue()
 finish = FinishLine()
-all_sprites.add(text)
 all_sprites.add(minimap_player_blue)
 all_sprites.add(grass)
 all_sprites.add(road)
@@ -508,9 +554,13 @@ checkpoint9 = Checkpoint(1790, 730, 90)
 all_sprites.add(checkpoint1, checkpoint2, checkpoint3, checkpoint4, checkpoint5, checkpoint6, checkpoint7,  checkpoint8,
                 checkpoint9)
 
-
+win_disel_red = False
+win_disel_blue = False
+k=0
+start_time = time.time()
 while running:
     # print(f"x: {car_red.rect.x}, y:{car_red.rect.y}")
+    print(k)
     received_info = net.send(send_info[:])
     clock.tick(FPS)
     for event in pygame.event.get():
@@ -524,16 +574,18 @@ while running:
         send_info[1] = car_red.real_x
         send_info[2] = car_red.real_y
         send_info[3] = car_red.angle
+        send_info[5] = car_red.count
         car_red.update1(pressed)
         car_blue.rect.x = received_info[1]
         car_blue.rect.y = received_info[2]
         car_blue.real_y = received_info[2]
         car_blue.real_x = received_info[1]
         car_blue.angle = received_info[3]
+        car_blue.count = received_info[5]
         for sprite in all_sprites:
             if not (isinstance(sprite, Minimap) or isinstance(sprite, MinimapPlayerRed) or
                     isinstance(sprite, Car) and sprite.color == "blue" or
-                    isinstance(sprite, MinimapPlayerBlue) or isinstance(sprite, Text)):
+                    isinstance(sprite, MinimapPlayerBlue)):
                 camera.apply(sprite)
         camera.update(car_red)
         car_blue.image = pygame.transform.rotate(car_blue.original_image, car_blue.angle)
@@ -545,16 +597,18 @@ while running:
         send_info[1] = car_blue.real_x
         send_info[2] = car_blue.real_y
         send_info[3] = car_blue.angle
+        send_info[5] = car_blue.count
         car_blue.update1(pressed)
         car_red.rect.x = received_info[1]
         car_red.rect.y = received_info[2]
         car_red.angle = received_info[3]
         car_red.real_x = received_info[1]
         car_red.real_y = received_info[2]
+        car_red.count = received_info[5]
         for sprite in all_sprites:
             if not (isinstance(sprite, Minimap) or isinstance(sprite, MinimapPlayerRed) or
                     isinstance(sprite, Car) and sprite.color == "red" or
-                    isinstance(sprite, MinimapPlayerBlue) or isinstance(sprite, Text)):
+                    isinstance(sprite, MinimapPlayerBlue)):
                 camera.apply(sprite)
         camera.update(car_blue)
         car_red.image = pygame.transform.rotate(car_red.original_image, car_red.angle)
@@ -569,19 +623,45 @@ while running:
     else:
         car_red.rect.x += global_dx
         car_red.rect.y += global_dy
-    fontObj = pygame.font.Font('freesansbold.ttf', 50)
-    textSurfaceObj = fontObj.render('Hello world!', True, YELLOW, BLUE)
-    textRectObj = textSurfaceObj.get_rect()
-    textRectObj.center = (500, 400)
-    screen.blit(textSurfaceObj, textRectObj)
+    # fontObj = pygame.font.Font('freesansbold.ttf', 50)
+    # textSurfaceObj = fontObj.render('Hello world!', True, YELLOW, BLUE)
+    # textRectObj = textSurfaceObj.get_rect()
+    # textRectObj.center = (500, 400)
+    # screen.blit(textSurfaceObj, textRectObj)
     all_sprites.update()
     screen.fill(GREEN)
     all_sprites.draw(screen)
-    pygame.display.flip()
     all_sprites.move_to_front(car_red)
     all_sprites.move_to_front(car_blue)
     all_sprites.move_to_front(minimap)
     all_sprites.move_to_front(minimap_player_red)
     all_sprites.move_to_front(minimap_player_blue)
-    all_sprites.move_to_front(text)
+    time_passed = time.time() - start_time
+    font = pygame.font.SysFont("Arial", 32)
+    textSurf1 = font.render(f'current lap: {time_passed:.2f}', 1, WHITE)
+    if car_red.unplayable:
+        textSurf = font.render(f'Laps: {car_blue.count}', 1, WHITE)
+        last_check = list(filter(lambda x: car_blue.dct_checkpoints[x], car_blue.dct_checkpoints.keys()))
+        last_check = 0 if not last_check else max(last_check)
+        checkpoints_text = font.render(f'Last checkpoint: {last_check}', 1, WHITE)
+    else:
+        textSurf = font.render(f'Laps: {car_red.count}', 1, WHITE)
+        last_check = list(filter(lambda x: car_red.dct_checkpoints[x], car_red.dct_checkpoints.keys()))
+        last_check = 0 if not last_check else max(last_check)
+        checkpoints_text = font.render(f'Last checkpoint: {last_check}', 1, WHITE)
+    if car_red.count == 1:
+        win_disel_red = True
+        k += 1
+    if car_blue.count == 1:
+        win_disel_blue = True
+        k += 1
+    if k == 10:
+        running = False
+    screen.blit(textSurf, (1020, 150))
+    screen.blit(textSurf1, (1020, 180))
+    screen.blit(checkpoints_text, (1020, 210))
+    pygame.display.flip()
+
+print(win_disel_red, win_disel_blue)
+gameover_screen()
 pygame.quit()

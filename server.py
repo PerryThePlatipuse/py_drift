@@ -4,7 +4,7 @@ import sys
 import pickle
 
 server = "0.0.0.0"
-port = 5555
+port = 3485
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
     s.bind((server, port))
@@ -12,7 +12,7 @@ except socket.error as e:
     str(e)
 s.listen(2)
 print("Waiting for a connection, Server Started")
-players = [[True, 1300, 700, 0, False], [False, 1400, 800, 0, False]]
+players = [[True, 1300, 700, 270, False, 0], [False, 1400, 800, 270, False, 0]]
 
 
 def threaded_client(conn, player):
